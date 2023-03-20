@@ -127,8 +127,7 @@ if __name__ == '__main__':
         j = 0
 
         data = open(targetPath + repoName + '/commits.txt', 'w', encoding='utf-8')
-        v = len(authorList)
-        vv = len(emailList)
+
 
         for i in range(len(authorList)):
             if commitList[i] >= x[0]:
@@ -137,7 +136,7 @@ if __name__ == '__main__':
                 data.write(str(commitList[i]) + '\t' + authorList[i])#+ '\t' + emailList[i])
 
         print("\t- Committers have been reduced.")
-'''
+
         data = open(targetPath + repoName + '/commits.txt', 'r', encoding='utf-8')
         lines = data.readlines()
 
@@ -234,7 +233,7 @@ if __name__ == '__main__':
                     firstDateFile.write('\n')
                 else:
                     firstDateFile.write(str((username_last_date - username_first_date).days) + '\n')
-'''
+
 '''
         aadsFile = open(targetPath + repoName + '/aads.txt', 'r', encoding='utf-8')
         firstDateFile = open(targetPath + repoName + '/daysBetweenFirstLast.txt', 'r', encoding='utf-8')
