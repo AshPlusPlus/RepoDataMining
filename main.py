@@ -15,9 +15,9 @@ def select_dir(repoName, repoPath, targetPath, row, cc):
     if not os.path.exists(targetdir):
         os.makedirs(targetdir)
     if (row['AVL'] == 1 or cc == 1):
-        os.system('git shortlog --until="2015-08-25" -sn --all --format="%aN <%aE>" > ' + targetdir + '/commits.txt')
+        os.system('git shortlog --until="2015-08-25" -sne --all --format="%aN <%aE>" > ' + targetdir + '/commits.txt')
     else:
-        os.system('git shortlog --until="2016-09-25" -sn --all --format="%aN <%aE>" > ' + targetdir + '/commits.txt')
+        os.system('git shortlog --until="2016-09-25" -sne --all --format="%aN <%aE>" > ' + targetdir + '/commits.txt')
     commitsFile = targetdir + '/commits.txt'
     data = open(commitsFile, 'r', encoding='utf-8', errors='ignore')
     return data
@@ -41,7 +41,6 @@ if __name__ == '__main__':
 
 
 
-    commitList = []
 
     cc = 0
 
@@ -51,10 +50,10 @@ if __name__ == '__main__':
         repoName = row['Repository']
         if cc > 0:
             break
-     #   cc+=1
-  #      repoName = "ipython"
-        if repoName[0] < 'i' or repoName == "salt" or repoName == "symfony":
-            continue
+      #  cc+=2
+     #   repoName = "symfony"
+       # if repoName[0] < 'i' or repoName == "salt" or repoName == "symfony":
+       #     continue
 
 
         print("Working in " + repoName + "...")
@@ -64,28 +63,34 @@ if __name__ == '__main__':
             editCommandStart = 'git --no-pager log --until="2015-08-25" --author="'
 
 
-        editCommandEnd = '" --format=tformat: --numstat | q -t "select sum(1), sum(2) from -" >> '
+        editCommandEnd = '" --format=tformat: --numstat | q -t "select sum(1), sum(2) from -"'
         editCommandfile = targetPath + repoName + '/aads.txt'
 
         fdateCommandStart = 'git log --reverse --format=%cd --author="'
         fdateCommandEnd = '" | q -t "select * from - limit 1"'
-        fdateCommandfile = targetPath + repoName + '/firstCommit.txt'
+        #fdateCommandfile = targetPath + repoName + '/firstCommit.txt'
 
         ldateCommandStart = 'git log -1 --format=%cd --until="2016-09-25" --author="'
         if (row['AVL'] == 1 or cc==1):
             ldateCommandStart = 'git log -1 --format=%cd --until="2015-08-25" --author="'
 
         ldateCommandEnd = '"'
-        ldateCommandfile = targetPath + repoName + '/lastCommit.txt'
+      #  ldateCommandfile = targetPath + repoName + '/lastCommit.txt'
 
         data = select_dir(repoName, repoPath, targetPath, row, cc)
         lines = data.readlines()
         data.close()
         authorList = []
+        commitList = []
+        emailList = []
+        duplicates = {}
         for line in lines:
             line.strip()
-            authorList.append(line.split('\t')[1].strip())
             commitList.append(int(line.split('\t')[0].strip()))
+            authorMail = line.split('\t')[1].strip()
+            authorList.append(authorMail.split('<')[0].strip())
+            emailList.append(authorMail.split('<')[1].strip()[:-1])
+
         k = 0
         l = 1
         size = len(authorList)
@@ -99,11 +104,17 @@ if __name__ == '__main__':
                 string1 = re.sub("[\(\[].*?[\)\]]", "", string1)
                 string2 = re.sub("[\(\[].*?[\)\]]", "", string2)
 
-                if (distance(string1, string2) < 2 and len(string2) > 3 and len(string2) > 3):
+                if ((distance(string1, string2) < 2 and len(string2) > 3 and len(string2) > 3) or
+                        (emailList[k] == emailList[l])):
                     print('Duplicates: ' + string1 + ' at ' + str(k) + ' - ' + string2 + ' at ' + str(l))
+                    if duplicates.get(authorList[k]) is not None:
+                        duplicates.get(authorList[k]).append(authorList[l])
+                    else:
+                        duplicates[authorList[k]] = [authorList[l]]
                     commitList[k] = commitList[k] + commitList[l]
                     authorList.pop(l)
                     commitList.pop(l)
+                    emailList.pop(l)
                     size-=1
         #        string1 = authorList[k].replace(' ', '').lower()
          #       string2 = authorList[l].replace(' ', '').lower()
@@ -116,20 +127,21 @@ if __name__ == '__main__':
         j = 0
 
         data = open(targetPath + repoName + '/commits.txt', 'w', encoding='utf-8')
+        v = len(authorList)
+        vv = len(emailList)
 
         for i in range(len(authorList)):
             if commitList[i] >= x[0]:
                 if (i > 0):
                     data.write('\n')
-                data.write(str(commitList[i]) + '\t' + authorList[i])
+                data.write(str(commitList[i]) + '\t' + authorList[i])#+ '\t' + emailList[i])
 
         print("\t- Committers have been reduced.")
-
+'''
         data = open(targetPath + repoName + '/commits.txt', 'r', encoding='utf-8')
         lines = data.readlines()
 
         aadsFile = open(targetPath + repoName + '/aads.txt', 'w', encoding='utf-8')
-        aadsFile.close()
         firstDateFile = open(targetPath + repoName + '/daysBetweenFirstLast.txt', 'w', encoding='utf-8')
         lastDateFile = open(targetPath + repoName + '/daysSinceLast.txt', 'w', encoding='utf-8')
         if (row['AVL'] == 0):
@@ -141,33 +153,88 @@ if __name__ == '__main__':
         print("\t- Getting line edits and dates.")
         for line in lines:
             line.strip()
-            author = line.split('\t')[1]
             commits = line.split('\t')[0]
             commits = commits.strip()
+            if int(commits) < x[0]:
+                continue
+            authorMail = line.split('\t')[1].strip()
+            if (len(authorMail) < 2):
+                print(authorMail)
+            author = line.split('\t')[1].strip()
+           # email = line.split('\t')[2].strip()
             author = author.strip()
             author = author.replace('"', '\\"')
-            if int(commits) >= x:
-                editCommand = editCommandStart + author + editCommandEnd + editCommandfile
-                fdateCommand = fdateCommandStart + author + fdateCommandEnd
-                ldateCommand = ldateCommandStart + author + ldateCommandEnd
-                os.system(editCommand)
+            listOfUsernames = [author]
+            if duplicates.get(author) is not None:
+                listOfUsernames.extend(duplicates.get(author))
+            adds_per_author = 0
+            dels_per_author = 0
+            username_first_date = 0
+            username_last_date = 0
+
+            for authorUsername in listOfUsernames:
+
+                editCommand = editCommandStart + authorUsername + editCommandEnd #+ editCommandfile
+                fdateCommand = fdateCommandStart + authorUsername + fdateCommandEnd
+                ldateCommand = ldateCommandStart + authorUsername + ldateCommandEnd
+
+                edits_per_username = os.popen(editCommand).read().strip()
+                edits_per_username = edits_per_username.strip()
+                addsdels_per_username = edits_per_username.split('\t')
+
+                if len(addsdels_per_username) == 2:
+                    adds_per_author += int(addsdels_per_username[0].strip())
+                    dels_per_author += int(addsdels_per_username[1].strip())
+
+
+                    #os.system(editCommand)
 
                 first_format_output = format_date(os.popen(fdateCommand).read().strip())
                 last_format_output = format_date(os.popen(ldateCommand).read().strip())
                 if last_format_output == "Empty":
-                    emptyAuthorsFile.write('\t' + author + '\n')
-                    print("Empty Author: " + author)
-                    firstDateFile.write('\n')
-                    lastDateFile.write('\n')
+                    emptyAuthorsFile.write('\t' + authorUsername + '\n')
+                    print("Empty Author: " + authorUsername)
+               #     firstDateFile.write('\n')
+                #    lastDateFile.write('\n')
                 elif last_format_output != "Empty" and first_format_output == "Empty":
                     firstDateFile.write('\n')
                     LAST_DATE = datetime.strptime(last_format_output, '%d %b %Y')
-                    lastDateFile.write(str((FINAL_DATE - LAST_DATE).days) + '\n')
+                    if username_last_date == 0:
+                        username_last_date = LAST_DATE
+                    elif LAST_DATE > username_last_date:
+                        username_last_date = LAST_DATE
+
+
+                 #   lastDateFile.write(str((FINAL_DATE - LAST_DATE).days) + '\n')
                 else:
                     FIRST_DATE = datetime.strptime(format_date(os.popen(fdateCommand).read().strip()), '%d %b %Y')
                     LAST_DATE = datetime.strptime(format_date(os.popen(ldateCommand).read().strip()), '%d %b %Y')
-                    firstDateFile.write(str((LAST_DATE - FIRST_DATE).days) + '\n')
-                    lastDateFile.write(str((FINAL_DATE - LAST_DATE).days) + '\n') 
+                    if username_last_date == 0:
+                        username_first_date = FIRST_DATE
+                        username_last_date = LAST_DATE
+                    else:
+                        if LAST_DATE > username_last_date:
+                            username_last_date = LAST_DATE
+                        if FIRST_DATE < username_first_date:
+                            username_first_date = FIRST_DATE
+
+                 #   firstDateFile.write(str((LAST_DATE - FIRST_DATE).days) + '\n')
+                  #  lastDateFile.write(str((FINAL_DATE - LAST_DATE).days) + '\n')
+
+            if (adds_per_author == 0 and dels_per_author == 0):
+                aadsFile.write('\n')
+            else:
+                aadsFile.write(str(adds_per_author) + '\t' + str(dels_per_author) + '\n')
+            if username_last_date == 0:
+                lastDateFile.write('\n')
+                firstDateFile.write('\n')
+            else:
+                lastDateFile.write(str((FINAL_DATE - username_last_date).days) + '\n')
+                if username_first_date == 0:
+                    firstDateFile.write('\n')
+                else:
+                    firstDateFile.write(str((username_last_date - username_first_date).days) + '\n')
+'''
 '''
         aadsFile = open(targetPath + repoName + '/aads.txt', 'r', encoding='utf-8')
         firstDateFile = open(targetPath + repoName + '/daysBetweenFirstLast.txt', 'r', encoding='utf-8')
