@@ -48,10 +48,12 @@ if __name__ == '__main__':
     for index, row in df.iterrows():
         print(row['AVL'] )
         repoName = row['Repository']
-        if cc > 0:
-            break
-      #  cc+=2
-     #   repoName = "symfony"
+        repoName = 'sass'
+      #  if cc > 0:
+       #     break
+        #cc+=2
+        if repoName == "symfony":
+            continue
        # if repoName[0] < 'i' or repoName == "salt" or repoName == "symfony":
        #     continue
 
@@ -105,6 +107,7 @@ if __name__ == '__main__':
                 string2 = re.sub("[\(\[].*?[\)\]]", "", string2)
 
                 if ((distance(string1, string2) < 2 and len(string2) > 3 and len(string2) > 3) or
+                        (string1 == string2) or
                         (emailList[k] == emailList[l])):
                     print('Duplicates: ' + string1 + ' at ' + str(k) + ' - ' + string2 + ' at ' + str(l))
                     if duplicates.get(authorList[k]) is not None:
@@ -136,9 +139,10 @@ if __name__ == '__main__':
                 data.write(str(commitList[i]) + '\t' + authorList[i])#+ '\t' + emailList[i])
 
         print("\t- Committers have been reduced.")
-
+        data.close()
         data = open(targetPath + repoName + '/commits.txt', 'r', encoding='utf-8')
         lines = data.readlines()
+        data.close()
 
         aadsFile = open(targetPath + repoName + '/aads.txt', 'w', encoding='utf-8')
         firstDateFile = open(targetPath + repoName + '/daysBetweenFirstLast.txt', 'w', encoding='utf-8')
@@ -156,11 +160,7 @@ if __name__ == '__main__':
             commits = commits.strip()
             if int(commits) < x[0]:
                 continue
-            authorMail = line.split('\t')[1].strip()
-            if (len(authorMail) < 2):
-                print(authorMail)
             author = line.split('\t')[1].strip()
-           # email = line.split('\t')[2].strip()
             author = author.strip()
             author = author.replace('"', '\\"')
             listOfUsernames = [author]
@@ -233,6 +233,9 @@ if __name__ == '__main__':
                     firstDateFile.write('\n')
                 else:
                     firstDateFile.write(str((username_last_date - username_first_date).days) + '\n')
+        aadsFile.close()
+        firstDateFile.close()
+        lastDateFile.close()
 
 '''
         aadsFile = open(targetPath + repoName + '/aads.txt', 'r', encoding='utf-8')
