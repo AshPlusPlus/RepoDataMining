@@ -48,7 +48,7 @@ if __name__ == '__main__':
     for index, row in df.iterrows():
         print(row['AVL'] )
         repoName = row['Repository']
-        repoName = 'sass'
+      #  repoName = 'sass'
       #  if cc > 0:
        #     break
         #cc+=2
