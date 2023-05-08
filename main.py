@@ -49,9 +49,9 @@ if __name__ == '__main__':
         print(row['AVL'] )
         repoName = row['Repository']
         repoName = 'sass'
-        if cc > 0:
-            break
-        cc+=2
+      #  if cc > 0:
+       #     break
+        #cc+=2
         if repoName == "symfony":
             continue
        # if repoName[0] < 'i' or repoName == "salt" or repoName == "symfony":
