@@ -30,6 +30,42 @@ def format_date(line):
     else:
         return "Empty"
 
+def findInString(s, ch):
+    return [i for i, ltr in enumerate(s) if ltr == ch]
+
+def mapInitials(string1, string2): # function to check if one username is the initials of another, so it maps them toe ach other
+    if (len(string1) <= 3):
+        initials_string = string1
+        full_string = string2
+    elif (len(string2) <= 3):
+        initials_string = string2
+        full_string = string1
+    else:
+        return False
+    while len(full_string) > 0 and len(initials_string) > 0\
+        and (full_string[-1] == '_' or full_string[-1] == '.' or initials_string[-1] == '.' or initials_string[-1] == '.'):
+        if (full_string[-1] == '.' or full_string[-1] == '_'):  # ensuring name does not end by separator ('.' or '_')
+            full_string = full_string[:-1]
+        if (initials_string[-1] == '.' or initials_string[-1] == '_'):
+            initials_string = initials_string[:-1]
+
+    separator_indexes = findInString(full_string, ' ')
+    if not separator_indexes:
+        separator_indexes = findInString(full_string, '.')
+        if not separator_indexes:
+            separator_indexes = findInString(full_string, '_')
+            if not separator_indexes:
+                    return False
+    if len(initials_string) == len(separator_indexes) + 1 and initials_string[0] == full_string[0]:
+        separator_ii = 0
+        for initial in initials_string[1:]:
+            if initial != full_string[separator_indexes[separator_ii] + 1]:
+                return False
+            separator_ii += 1
+        return True
+    return False
+
+
 if __name__ == '__main__':
     df = pd.read_excel('C:/Users/ahmed/Desktop/Thesis Prog/dataset.xlsx')
     df = df.reset_index()
@@ -46,14 +82,14 @@ if __name__ == '__main__':
 
     emptyAuthorsFile = open('C:/Users/ahmed/Desktop/Thesis Prog/emptyAuthors.txt', 'w', encoding='utf-8')
     for index, row in df.iterrows():
-        print(row['AVL'] )
+        print(row['AVL'])
         repoName = row['Repository']
       #  repoName = 'sass'
-      #  if cc > 0:
-       #     break
-        #cc+=2
-        if repoName == "symfony":
-            continue
+        if cc > 0:
+            break
+        cc+=2
+    #    if repoName == "symfony":
+    #        continue
        # if repoName[0] < 'i' or repoName == "salt" or repoName == "symfony":
        #     continue
 
@@ -101,14 +137,24 @@ if __name__ == '__main__':
                 break
 
             for l in reversed(range(k+1, len(authorList))):
+
                 string1 = authorList[k].replace(' ', '').lower()
                 string2 = authorList[l].replace(' ', '').lower()
+                initials_match = mapInitials(string1, string2)
+
+
                 string1 = re.sub("[\(\[].*?[\)\]]", "", string1)
                 string2 = re.sub("[\(\[].*?[\)\]]", "", string2)
+                email1 = emailList[k].split('@')[0]
+                email2 = emailList[l].split('@')[0]
+                email_initials_match = mapInitials(email1, email2)
 
-                if ((distance(string1, string2) < 2 and len(string2) > 3 and len(string2) > 3) or
+
+                if ((distance(string1, string2) < 2 and len(string1) > 3 and len(string2) > 3) or
                         (string1 == string2) or
-                        (emailList[k] == emailList[l])):
+                        (email1 == email2) or
+                        initials_match or
+                        email_initials_match):
                     print('Duplicates: ' + string1 + ' at ' + str(k) + ' - ' + string2 + ' at ' + str(l))
                     if duplicates.get(authorList[k]) is not None:
                         duplicates.get(authorList[k]).append(authorList[l])
