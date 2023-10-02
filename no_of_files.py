@@ -1,42 +1,144 @@
-import git
+import subprocess
 import os
-from collections import defaultdict
+import pandas as pd
+import re
+from Levenshtein import distance
 
+def count_files_by_developer(repo_path, avl):
+    developer_file_counts = {}
 
-def count_files_by_developer(repo_path):
-    # Initialize a dictionary to store file counts by developer
-    developer_file_counts = defaultdict(int)
+    try:
+        # Change to the Git repository directory
+        os.chdir(repo_path)
 
-    # Open the Git repository
-    repo = git.Repo(repo_path)
+        # Run 'git log' with '--name-status' and '--until' options to get commits until the specified date
+        if avl == 1:
+            git_log_command = f"git log --format='%an;;;%aE' --name-status --until='2015-08-25'"
+        else:
+            git_log_command = f"git log --format='%an;;;%aE' --name-status --until='2016-09-25'"
+    #    git_log_command = f"git log --name-status --format='%an;;;%aE' --until='{until_date}'"
+        #git_log_output = subprocess.check_output(git_log_command, shell=True, universal_newlines=True)
+        git_log_output_bytes = subprocess.check_output(git_log_command, shell=True)
+        git_log_output = git_log_output_bytes.decode("utf-8", errors='ignore')
+        current_developer = None
+        unique_authors = set()  # Maintain a set of unique author names
 
-    # Iterate through all commits in the repository
-    for commit in repo.iter_commits():
-        author_name = commit.author.name
+        for line in git_log_output.splitlines():
+            if line.startswith("'"):
+                current_developer = line.strip("'")
+                unique_authors.add(current_developer)  # Add the author to the set
 
-        # Get the list of changed files in this commit
-        changed_files = commit.stats.files.keys()
+            elif line.startswith(("M", "A")):
+                # Exclude file renames (lines starting with 'R')
+                if not line.startswith("R"):
+                    # Increment counts for each unique author
+                    for author in unique_authors:
+                        developer_file_counts[author] = developer_file_counts.get(author, 0) + 1
 
-        # Increment the count for each changed file by the author
-        for file in changed_files:
-            developer_file_counts[(author_name, file)] += 1
-
-    # Sum up the counts for each developer
-    developer_counts = defaultdict(int)
-    for (author, _), count in developer_file_counts.items():
-        developer_counts[author] += count
-
-    return developer_counts
-
+        return developer_file_counts
+    except FileNotFoundError:
+        return None
 
 if __name__ == "__main__":
-    repo_address = input("Enter the Git repository path: ")
+    df = pd.read_excel('C:/Users/ahmed/Desktop/Thesis Prog/dataset.xlsx')
+    df = df.reset_index()
+    reposPath = 'C:/Users/ahmed/Documents/GitHub/Thesis/'
+    targetPath = reposPath + 'XXrepostatsXX/'
 
-    if os.path.exists(repo_address):
-        developer_counts = count_files_by_developer(repo_address)
+    for index, row in df.iterrows():
+     #   print(row['AVL'])
+        repoName = row['Repository']
+        print("Working in " + repoName + "...")
+        repo_path = reposPath + repoName
+        #repo_path = "C:/Users/ahmed/Documents/GitHub/Thesis/androidannotations"
+        print('\tGenerating files...')
+        author_files = count_files_by_developer(repo_path, row['AVL'])
+        authorList = []
+        emailList = []
+        filesList = list(author_files.values())
+        for author_email in author_files.keys():
+            authorList.append(author_email.split(";;;")[0])
+            emailList.append(author_email.split(";;;")[1])
 
-        print("Number of files created/modified by each developer:")
-        for developer, count in developer_counts.items():
-            print(f"{developer}: {count} files")
-    else:
-        print("Invalid repository path.")
+        duplicates = {}
+        size = len(authorList)
+        print('\tEliminating duplicates...')
+        for k in range(len(authorList)):
+            if (k == size - 1):
+                break
+            for l in reversed(range(k + 1, len(authorList))):
+                if k ==l:
+                    print('here')
+                string1 = authorList[k].replace(' ', '').lower()
+                string2 = authorList[l].replace(' ', '').lower()
+                initials_match = False
+                #if (len(string1) > 0 and len(string2) > 0):
+                #    initials_match = mapInitials(string1, string2)
+
+                string1 = re.sub("[\(\[].*?[\)\]]", "", string1)
+                string2 = re.sub("[\(\[].*?[\)\]]", "", string2)
+                email1 = emailList[k]#.split('@')[0]
+                email2 = emailList[l]#.split('@')[0]
+                email_initials_match = False
+                #if (len(email1) > 0 and len(email2) > 0):
+                #    email_initials_match = mapInitials(email1, email2)
+
+                if ((distance(string1, string2) < 2 and len(string1) > 3 and len(string2) > 3) or
+                        (string1 == string2) or
+                        (email1 == email2) or
+                        initials_match or
+                        email_initials_match):
+                 #   print('Duplicates: ' + string1 + ' at ' + str(k) + ' - ' + string2 + ' at ' + str(l))
+                    if duplicates.get(authorList[k]) is not None:
+                        duplicates.get(authorList[k]).append(authorList[l])
+                    else:
+                        duplicates[authorList[k]] = [authorList[l]]
+                    filesList[k] = filesList[k] + filesList[l]
+                    authorList.pop(l)
+                    filesList.pop(l)
+                    emailList.pop(l)
+                    size -= 1
+
+
+
+        commitsFile = open(targetPath + repoName + '/commits.txt', "r", encoding='utf-8', errors='ignore')
+        lines = commitsFile.readlines()
+        newAuthorsList = []
+        newFilesList = []
+
+        for line in lines:
+            author = line.split('\t')[1].strip()
+            if author in authorList:
+                newAuthorsList.append(author)
+                newFilesList.append(filesList[authorList.index(author)])
+            else:
+                for authorItem in duplicates.keys():
+                    if author in duplicates[authorItem]:
+                        newAuthorsList.append(author)
+                        newFilesList.append(filesList[authorList.index(authorItem)])
+                        break
+        filesFile = open(targetPath + repoName + '/files.txt', "w", encoding='utf-8', errors='ignore')
+        i = 0
+        for line in lines:
+            author = line.split('\t')[1].strip()
+            if author not in newAuthorsList:
+                filesFile.write('\n')
+            else:
+                filesFile.write(str(newFilesList[i]) + '\n')
+                i += 1
+
+        filesFile.close()
+    # repo_address = input("Enter the Git repository path: ")
+    # until_date = input("Enter the date (YYYY-MM-DD) until which to consider commits: ")
+    #
+    # if os.path.exists(repo_address):
+    #     developer_counts = count_files_by_developer(repo_address, until_date)
+    #
+    #     if developer_counts is not None:
+    #         print("Number of files modified/created (excluding renames) by each developer:")
+    #         for developer, count in developer_counts.items():
+    #             print(f"{developer}: {count} files")
+    #     else:
+    #         print("Invalid Git repository.")
+    # else:
+    #     print("Invalid repository path.")

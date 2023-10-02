@@ -43,7 +43,81 @@ def get_commit_message_lengths(repo_path, avl):
 
 
 
-
+# def count_files_by_developer(repo_path, avl, duplicates):
+#     developer_file_counts = {}
+#
+#     try:
+#         # Change to the Git repository directory
+#         os.chdir(repo_path)
+#
+#         # Run 'git log' to get the commit history
+#         if avl == 1:
+#             git_log_command = f"git log --format='%an' --name-status --until='2015-08-25'"
+#         else:
+#             git_log_command = f"git log --format='%an' --name-status --until='2016-09-25'"
+#
+#         try:
+#             git_log_output_bytes = subprocess.check_output(git_log_command, shell=True)
+#             git_log_output = git_log_output_bytes.decode("utf-8", errors='ignore')
+#            #git_log_output = subprocess.check_output(git_log_command, shell=True, universal_newlines=True)
+#         except subprocess.CalledProcessError as e:
+#             # Handle the subprocess error, e.g., print the error message.
+#             print(f"Subprocess error: {e}")
+#         except UnicodeDecodeError as e:
+#             # Handle the decoding error, e.g., print the error message.
+#             print(f"UnicodeDecodeError: {e}")
+#             git_log_output = git_log_output_bytes.decode("utf-8", errors='ignore')
+#
+#         current_developer = None
+#         unique_authors = set()  # Maintain a set of unique author names
+#
+#         for line in git_log_output.splitlines():
+#             if line.startswith("'"):
+#                 current_developer = line.strip("'")
+#                 unique_authors.add(current_developer)  # Add the author to the set
+#
+#             elif line.startswith(("M", "A")):
+#                 # Exclude file renames (lines starting with 'R')
+#                 if not line.startswith("R"):
+#                     # Increment counts for each unique author
+#                     for author in unique_authors:
+#                         developer_file_counts[author] = developer_file_counts.get(author, 0) + 1
+#         if repo_path == 'C:/Users/ahmed/Documents/GitHub/Thesis/flask':
+#             print('here')
+#         if developer_file_counts != {} and duplicates != {}:
+#             nodups_developer_file_counts = {}
+#             for dev_name in developer_file_counts.keys():
+#                 if dev_name in duplicates.keys():
+#                     nodups_developer_file_counts[dev_name] = developer_file_counts[dev_name]
+#                     for dev_duplicate in duplicates[dev_name]:
+#                         nodups_developer_file_counts[dev_name] += developer_file_counts.get(dev_duplicate, 0)
+#                 else:
+#                     is_a_duplicate = False
+#                     for duplicate_key in duplicates.keys():
+#                         for dev_duplicate in duplicates[duplicate_key]:
+#                             if dev_name == dev_duplicate:
+#                                 is_a_duplicate = True
+#                     if not is_a_duplicate:
+#                         nodups_developer_file_counts[dev_name] = developer_file_counts[dev_name]
+#
+#             # for dev_name in duplicates.keys():
+#             #     try:
+#             #
+#             #         nodups_developer_file_counts[dev_name] = developer_file_counts[dev_name]
+#             #     except KeyError:
+#             #         nodups_developer_file_counts[dev_name] = -1
+#             #         print('\n' + dev_name + '\t' + repo_path + '\n')
+#             #     for dup_dev_name in duplicates[dev_name]:
+#             #         try:
+#             #
+#             #             nodups_developer_file_counts[dev_name] = nodups_developer_file_counts[dev_name] + developer_file_counts[dup_dev_name]
+#             #         except KeyError:
+#             #             nodups_developer_file_counts[dev_name] = -1
+#
+#             return nodups_developer_file_counts
+#         return developer_file_counts
+#     except FileNotFoundError:
+#         return None
 
 def findInString(s, ch):
     return [i for i, ltr in enumerate(s) if ltr == ch]
@@ -88,40 +162,42 @@ if __name__ == "__main__":
     targetPath = reposPath + 'XXrepostatsXX/'
 
     for index, row in df.iterrows():
-     #   print(row['AVL'])
         repoName = row['Repository']
         print("Working in " + repoName + "...")
         repo_path = reposPath + repoName
         #repo_path = "C:/Users/ahmed/Documents/GitHub/Thesis/androidannotations"
+        print('\tGenerating message lengths...')
         author_message_lengths = get_commit_message_lengths(repo_path, row['AVL'])
         authorList = []
         emailList = []
-        commitList = list(author_message_lengths.values())
+        msgsList = list(author_message_lengths.values())
         for author_email in author_message_lengths.keys():
             authorList.append(author_email.split(";;;")[0])
             emailList.append(author_email.split(";;;")[1])
-
+        if repoName == 'flask':
+            print('here')
         duplicates = {}
         size = len(authorList)
+        print('\tEliminating duplicates...')
         for k in range(len(authorList)):
             if (k == size - 1):
                 break
-
             for l in reversed(range(k + 1, len(authorList))):
-
+                if k ==l:
+                    print('here')
                 string1 = authorList[k].replace(' ', '').lower()
                 string2 = authorList[l].replace(' ', '').lower()
                 initials_match = False
-                if (len(string1) > 0 and len(string2) > 0):
-                    initials_match = mapInitials(string1, string2)
+                #if (len(string1) > 0 and len(string2) > 0):
+                #    initials_match = mapInitials(string1, string2)
 
                 string1 = re.sub("[\(\[].*?[\)\]]", "", string1)
                 string2 = re.sub("[\(\[].*?[\)\]]", "", string2)
-                email1 = emailList[k].split('@')[0]
-                email2 = emailList[l].split('@')[0]
+                email1 = emailList[k]#.split('@')[0]
+                email2 = emailList[l]#.split('@')[0]
                 email_initials_match = False
-                if (len(email1) > 0 and len(email2) > 0):
-                    email_initials_match = mapInitials(email1, email2)
+                #if (len(email1) > 0 and len(email2) > 0):
+                #    email_initials_match = mapInitials(email1, email2)
 
                 if ((distance(string1, string2) < 2 and len(string1) > 3 and len(string2) > 3) or
                         (string1 == string2) or
@@ -133,25 +209,29 @@ if __name__ == "__main__":
                         duplicates.get(authorList[k]).append(authorList[l])
                     else:
                         duplicates[authorList[k]] = [authorList[l]]
-                    commitList[k] = commitList[k] + commitList[l]
+                    msgsList[k] = msgsList[k] + msgsList[l]
                     authorList.pop(l)
-                    commitList.pop(l)
+                    msgsList.pop(l)
                     emailList.pop(l)
                     size -= 1
+
+
+
         commitsFile = open(targetPath + repoName + '/commits.txt', "r", encoding='utf-8', errors='ignore')
         lines = commitsFile.readlines()
         newAuthorsList = []
         newMsgsList = []
+
         for line in lines:
             author = line.split('\t')[1].strip()
             if author in authorList:
                 newAuthorsList.append(author)
-                newMsgsList.append(commitList[authorList.index(author)])
+                newMsgsList.append(msgsList[authorList.index(author)])
             else:
                 for authorItem in duplicates.keys():
                     if author in duplicates[authorItem]:
                         newAuthorsList.append(author)
-                        newMsgsList.append(commitList[authorList.index(authorItem)])
+                        newMsgsList.append(msgsList[authorList.index(authorItem)])
                         break
         msgsFile = open(targetPath + repoName + '/commitMsgs.txt', "w", encoding='utf-8', errors='ignore')
         i = 0
@@ -167,4 +247,4 @@ if __name__ == "__main__":
 
 
      #   for author, length in author_message_lengths.items():
-          #  print(f"{author}: {length} characters in commit messages")
+    #        print(f"{author}: {length} characters in commit messages")
