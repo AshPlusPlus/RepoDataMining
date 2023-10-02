@@ -73,11 +73,6 @@ if __name__ == '__main__':
     repoPath = 'C:/Users/ahmed/Documents/GitHub/Thesis/'
     targetPath = repoPath + 'XXrepostatsXX/'
 
-
-
-
-
-
     cc = 0
 
     emptyAuthorsFile = open('C:/Users/ahmed/Desktop/Thesis Prog/emptyAuthors.txt', 'w', encoding='utf-8')
@@ -145,9 +140,10 @@ if __name__ == '__main__':
 
                 string1 = re.sub("[\(\[].*?[\)\]]", "", string1)
                 string2 = re.sub("[\(\[].*?[\)\]]", "", string2)
-                email1 = emailList[k].split('@')[0]
-                email2 = emailList[l].split('@')[0]
-                email_initials_match = mapInitials(email1, email2)
+                email_initials_match = False
+                email1 = emailList[k]#.split('@')[0]
+                email2 = emailList[l]#.split('@')[0]
+             #   email_initials_match = mapInitials(email1, email2)
 
 
                 if ((distance(string1, string2) < 2 and len(string1) > 3 and len(string2) > 3) or
