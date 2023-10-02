@@ -1,53 +1,52 @@
-import os
 import subprocess
-from collections import defaultdict
+import os
 
+def get_blame_info(repo_path):
+    cmd = 'git ls-files'
+    try:
+        files = subprocess.check_output(cmd, cwd=repo_path, shell=True, stderr=subprocess.STDOUT, universal_newlines=True, encoding='utf-8')
+        files = files.splitlines()
+        blame_info = []
 
-def get_last_editor_for_files(repo_path):
-    # Change to the repository directory
-    os.chdir(repo_path)
-
-    # Get the list of all files in the repository
-    all_files = []
-    for root, dirs, files in os.walk("."):
         for file in files:
-            all_files.append(os.path.join(root, file))
+            cmd = f'git blame --line-porcelain "{file}"'
+            try:
+                output = subprocess.check_output(cmd, cwd=repo_path, shell=True, stderr=subprocess.STDOUT, universal_newlines=True, encoding='latin-1')
+                blame_info.append(output)
+            except subprocess.CalledProcessError as e:
+                print("Error executing Git command:", e.output)
 
-    # Dictionary to store the last editor for each file
-    last_editors = {}
+        return blame_info
+    except subprocess.CalledProcessError as e:
+        print("Error executing Git command:", e.output)
+        return []
 
-    for file_path in all_files:
-        try:
-            # Use the 'git blame' command to find the last editor of the file
-            blame_output = subprocess.check_output(["git", "blame", "--line-porcelain", file_path]).decode("utf-8")
+def count_blamed_files(blame_info):
+    developer_files = {}
 
-            # Extract the author's name
-            for line in blame_output.splitlines():
-                if line.startswith("author "):
-                    last_editor = line[len("author "):]
-                    last_editors[file_path] = last_editor
-                    break
-        except subprocess.CalledProcessError:
-            # Handle cases where 'git blame' fails, e.g., for binary files
-            last_editors[file_path] = "Unable to determine"
+    for info in blame_info:
+        current_file = None
 
-    # Create a dictionary to store the count of files edited by each developer
-    developer_file_counts = defaultdict(int)
+        for line in info.splitlines():
+            if line.startswith("filename "):
+                current_file = line[len("filename "):].strip()
+            elif line.startswith("author "):
+                developer_name = line[len("author "):].strip().split('<')[0].strip()
+                if developer_name not in developer_files:
+                    developer_files[developer_name] = set()
+                developer_files[developer_name].add(current_file)
 
-    for file_path, last_editor in last_editors.items():
-        developer_file_counts[last_editor] += 1
-
-    return developer_file_counts
-
+    return developer_files
 
 if __name__ == "__main__":
-    repo_path = input("Enter the path to the Git repository: ")
+    repo_path = "C:/Users/ahmed/Documents/GitHub/Thesis/androidannotations"  # Change this to your Git repo path
 
-    if os.path.exists(repo_path):
-        developer_file_counts = get_last_editor_for_files(repo_path)
+    blame_info = get_blame_info(repo_path)
 
-        print("Number of files edited by each developer:")
-        for developer, file_count in developer_file_counts.items():
-            print(f"{developer}: {file_count} files")
+    if blame_info:
+        developer_files_blamed = count_blamed_files(blame_info)
+        for developer, files in developer_files_blamed.items():
+            num_files = len(files)
+            print(f"{developer} is blamed for {num_files} files.")
     else:
-        print("Invalid repository path.")
+        print("No blame information found.")
