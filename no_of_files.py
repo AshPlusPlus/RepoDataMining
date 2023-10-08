@@ -58,8 +58,6 @@ if __name__ == "__main__":
     for index, row in df.iterrows():
      #   print(row['AVL'])
         repoName = row['Repository']
-        if repoName != 'openage':
-            continue
         print("Working in " + repoName + "...")
         repo_path = reposPath + repoName
         #repo_path = "C:/Users/ahmed/Documents/GitHub/Thesis/androidannotations"
