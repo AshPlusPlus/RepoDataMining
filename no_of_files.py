@@ -4,6 +4,7 @@ import pandas as pd
 import re
 from Levenshtein import distance
 
+
 def count_files_by_developer(repo_path, avl):
     developer_file_counts = {}
 
@@ -16,24 +17,33 @@ def count_files_by_developer(repo_path, avl):
             git_log_command = f"git log --format='%an;;;%aE' --name-status --until='2015-08-25'"
         else:
             git_log_command = f"git log --format='%an;;;%aE' --name-status --until='2016-09-25'"
-    #    git_log_command = f"git log --name-status --format='%an;;;%aE' --until='{until_date}'"
-        #git_log_output = subprocess.check_output(git_log_command, shell=True, universal_newlines=True)
+
         git_log_output_bytes = subprocess.check_output(git_log_command, shell=True)
         git_log_output = git_log_output_bytes.decode("utf-8", errors='ignore')
-        current_developer = None
-        unique_authors = set()  # Maintain a set of unique author names
+
+        # Initialize a dictionary to keep track of files modified or added by each developer
+        developer_file_changes = {}
 
         for line in git_log_output.splitlines():
             if line.startswith("'"):
                 current_developer = line.strip("'")
-                unique_authors.add(current_developer)  # Add the author to the set
 
             elif line.startswith(("M", "A")):
                 # Exclude file renames (lines starting with 'R')
                 if not line.startswith("R"):
-                    # Increment counts for each unique author
-                    for author in unique_authors:
-                        developer_file_counts[author] = developer_file_counts.get(author, 0) + 1
+                    # Get the file status and file name
+                    parts = line.split('\t')
+                    file_status = parts[0]
+                    file_name = parts[1]
+
+                    # Increment counts for the current author
+                    if current_developer not in developer_file_changes:
+                        developer_file_changes[current_developer] = set()
+                    developer_file_changes[current_developer].add(file_name)
+
+        # Calculate the count of unique files for each developer
+        for developer, files_changed in developer_file_changes.items():
+            developer_file_counts[developer] = len(files_changed)
 
         return developer_file_counts
     except FileNotFoundError:
@@ -48,6 +58,8 @@ if __name__ == "__main__":
     for index, row in df.iterrows():
      #   print(row['AVL'])
         repoName = row['Repository']
+        if repoName != 'openage':
+            continue
         print("Working in " + repoName + "...")
         repo_path = reposPath + repoName
         #repo_path = "C:/Users/ahmed/Documents/GitHub/Thesis/androidannotations"
