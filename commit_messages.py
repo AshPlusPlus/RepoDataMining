@@ -12,9 +12,9 @@ def get_commit_message_lengths(repo_path, avl):
 
     author_messages = {}
     if avl == 1:
-        git_log_command = 'git log --until="2015-08-25" --format="%aN;;;%aE:::%s"'
+        git_log_command = 'git log --all --until="2015-08-25" --format="%aN;;;%aE:::%s"'
     else:
-        git_log_command = 'git log --until="2019-09-25" --format="%aN;;;%aE:::%s"'
+        git_log_command = 'git log --all --until="2019-09-25" --format="%aN;;;%aE:::%s"'
     try:
         git_log_output_bytes = subprocess.check_output(git_log_command, shell=True)
         git_log_output = git_log_output_bytes.decode("utf-8", errors='ignore')
@@ -174,8 +174,6 @@ if __name__ == "__main__":
         for author_email in author_message_lengths.keys():
             authorList.append(author_email.split(";;;")[0])
             emailList.append(author_email.split(";;;")[1])
-        if repoName == 'flask':
-            print('here')
         duplicates = {}
         size = len(authorList)
         print('\tEliminating duplicates...')
@@ -183,8 +181,7 @@ if __name__ == "__main__":
             if (k == size - 1):
                 break
             for l in reversed(range(k + 1, len(authorList))):
-                if k ==l:
-                    print('here')
+
                 string1 = authorList[k].replace(' ', '').lower()
                 string2 = authorList[l].replace(' ', '').lower()
                 initials_match = False

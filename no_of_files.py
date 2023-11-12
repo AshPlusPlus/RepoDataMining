@@ -14,9 +14,9 @@ def count_files_by_developer(repo_path, avl):
 
         # Run 'git log' with '--name-status' and '--until' options to get commits until the specified date
         if avl == 1:
-            git_log_command = f"git log --format='%an;;;%aE' --name-status --until='2015-08-25'"
+            git_log_command = f"git log --all --format='%an;;;%aE' --name-status --until='2015-08-25'"
         else:
-            git_log_command = f"git log --format='%an;;;%aE' --name-status --until='2016-09-25'"
+            git_log_command = f"git log --all --format='%an;;;%aE' --name-status --until='2016-09-25'"
 
         git_log_output_bytes = subprocess.check_output(git_log_command, shell=True)
         git_log_output = git_log_output_bytes.decode("utf-8", errors='ignore')

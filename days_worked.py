@@ -8,9 +8,9 @@ import datetime
 def get_commit_dates(repo_pathm, avl):
     os.chdir(repo_path)
     if avl == 1:
-        cmd = 'git log --format="%an;;;%aE:::%ad" --date=short --until="2015-08-25"'
+        cmd = 'git log --all --format="%an;;;%aE:::%ad" --date=short --until="2015-08-25"'
     else:
-        cmd = 'git log --format="%an;;;%aE:::%ad" --date=short --until="2016-09-25"'
+        cmd = 'git log --all --format="%an;;;%aE:::%ad" --date=short --until="2016-09-25"'
     try:
         #output = subprocess.check_output(cmd, cwd=repo_path, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
         git_log_output_bytes = subprocess.check_output(cmd, shell=True)
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     targetPath = reposPath + 'XXrepostatsXX/'
 
     for index, row in df.iterrows():
+
         #   print(row['AVL'])
         repoName = row['Repository']
         print("Working in " + repoName + "...")
@@ -60,10 +61,6 @@ if __name__ == "__main__":
         else:
             print(f"Error! No commit dates found for {repoName}.")
             continue
-
-        print(authorList)
-        print(emailList)
-        print(daysList)
 
         duplicates = {}
         size = len(authorList)
