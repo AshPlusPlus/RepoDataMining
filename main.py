@@ -8,16 +8,16 @@ import xlrd
 import openpyxl
 from Levenshtein import distance
 
-def select_dir(repoName, repoPath, targetPath, row, cc):
+def select_dir(repoName, repoPath, targetPath, row):
     dir = repoPath + repoName
     targetdir = repoPath + 'XXrepostatsXX/' + repoName
     os.chdir(dir)
     if not os.path.exists(targetdir):
         os.makedirs(targetdir)
-    if (row['AVL'] == 1 or cc == 1):
-        os.system('git shortlog --until="2015-08-25" -sne --all --format="%aN <%aE>" > ' + targetdir + '/commits.txt')
+    if (row['AVL'] == 1):
+        os.system('git shortlog --until="2015-08-25" -sne --all --format="%aN <%aE>" --no-merges > ' + targetdir + '/commits.txt')
     else:
-        os.system('git shortlog --until="2016-09-25" -sne --all --format="%aN <%aE>" > ' + targetdir + '/commits.txt')
+        os.system('git shortlog --until="2016-09-25" -sne --all --format="%aN <%aE>" --no-merges > ' + targetdir + '/commits.txt')
     commitsFile = targetdir + '/commits.txt'
     data = open(commitsFile, 'r', encoding='utf-8', errors='ignore')
     return data
@@ -73,44 +73,33 @@ if __name__ == '__main__':
     repoPath = 'C:/Users/ahmed/Documents/GitHub/Thesis/'
     targetPath = repoPath + 'XXrepostatsXX/'
 
-    cc = 0
+
 
     emptyAuthorsFile = open('C:/Users/ahmed/Desktop/Thesis Prog/emptyAuthors.txt', 'w', encoding='utf-8')
     for index, row in df.iterrows():
-        print(row['AVL'])
         repoName = row['Repository']
-      #  repoName = 'sass'
-        if cc > 0:
-            break
-        cc+=2
-    #    if repoName == "symfony":
-    #        continue
-       # if repoName[0] < 'i' or repoName == "salt" or repoName == "symfony":
-       #     continue
-
-
         print("Working in " + repoName + "...")
         emptyAuthorsFile.write(repoName + " repo:\n")
-        editCommandStart = 'git --no-pager log --until="2016-09-25" --author="'
-        if (row['AVL'] == 1 or cc == 1):
-            editCommandStart = 'git --no-pager log --until="2015-08-25" --author="'
+        editCommandStart = 'git --no-pager log --all --until="2016-09-25" --author="'
+        if (row['AVL'] == 1):
+            editCommandStart = 'git --no-pager log --all --until="2015-08-25" --author="'
 
 
         editCommandEnd = '" --format=tformat: --numstat | q -t "select sum(1), sum(2) from -"'
         editCommandfile = targetPath + repoName + '/aads.txt'
 
-        fdateCommandStart = 'git log --reverse --format=%cd --author="'
+        fdateCommandStart = 'git log --all --reverse --format=%cd --author="'
         fdateCommandEnd = '" | q -t "select * from - limit 1"'
         #fdateCommandfile = targetPath + repoName + '/firstCommit.txt'
 
-        ldateCommandStart = 'git log -1 --format=%cd --until="2016-09-25" --author="'
-        if (row['AVL'] == 1 or cc==1):
-            ldateCommandStart = 'git log -1 --format=%cd --until="2015-08-25" --author="'
+        ldateCommandStart = 'git log --all -1 --format=%cd --until="2016-09-25" --author="'
+        if (row['AVL'] == 1):
+            ldateCommandStart = 'git log --all -1 --format=%cd --until="2015-08-25" --author="'
 
         ldateCommandEnd = '"'
       #  ldateCommandfile = targetPath + repoName + '/lastCommit.txt'
 
-        data = select_dir(repoName, repoPath, targetPath, row, cc)
+        data = select_dir(repoName, repoPath, targetPath, row)
         lines = data.readlines()
         data.close()
         authorList = []
