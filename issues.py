@@ -16,8 +16,11 @@ def check_rate_limit(username, token):
     print(rate_limit_info)
 
 
-def get_git_shortlog(repoName, repoPath):
-    command = 'git shortlog --until="2015-08-25" -sne --all --format="%aN <%aE>" --no-merges'
+def get_git_shortlog(repoName, repoPath, avl):
+    if avl == 1:
+        command = 'git shortlog --until="2015-08-25" -sne --all --format="%aN <%aE>" --no-merges'
+    elif avl == 0:
+        command = 'git shortlog --until="2016-09-25" -sne --all --format="%aN <%aE>" --no-merges'
     dir = repoPath + repoName
     os.chdir(dir)
     try:
@@ -79,8 +82,8 @@ def mapInitials(string1, string2): # function to check if one username is the in
     return False
 
 
-def get_duplicates():
-    lines = get_git_shortlog(repo_name, repoPath=reposPath)
+def get_duplicates(avl):
+    lines = get_git_shortlog(repoName, repoPath=reposPath, avl=avl)
     authorList = []
     commitList = []
     emailList = []
@@ -168,6 +171,8 @@ def count_issues_per_assignee(issues, token):
     for assignee, count in assignee_counts.items():
         user_info = get_user_details(assignee, token)
         name = user_info.get('name', 'N/A')
+        if name is None:
+            name = 'N/A'
         assignee_info[assignee] = (name, count, 0)
         print(f"{assignee} ({name}): {count} issues")
 
@@ -196,76 +201,93 @@ def print_issue_info(issue):
 username = "AshPlusPlus"
 repo_owner = 'Leaflet'
 repo_name = 'Leaflet'
-token = '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'
-before_date = '2015-08-25T00:00:00Z'  # Replace with your desired date
+token = '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'
 reposPath = 'C:/Users/ahmed/Documents/GitHub/Thesis/'
 targetPath = reposPath + 'XXrepostatsXX/'
 df = pd.read_excel('C:/Users/ahmed/Desktop/Thesis Prog/dataset.xlsx')
 df = df.reset_index()
 
+for index, row in df.iterrows():
+    #   print(row['AVL'])
+    repoName = row['Repository']
 
-check_rate_limit(username, token)
-current_time = datetime.now().strftime("%H:%M")
-print(f"\nCurrent Time: {current_time}")
-
-all_issues_before_date = get_all_issues_before_date(repo_owner, repo_name, token, before_date)
-
-current_time = datetime.now().strftime("%H:%M")
-print(f"\nCurrent Time: {current_time}")
-
-if all_issues_before_date:
-    # print(f"Issues in {repo_owner}/{repo_name} before {before_date}:")
-    # for issue in all_issues_before_date:
-    #     print_issue_info(issue)
-    #     print()
-
-    # Count the number of issues per assignee and fetch their names
-    assignee_info = count_issues_per_assignee(all_issues_before_date, token)
+    if not os.path.isfile(targetPath + repoName + '/issues.txt'):
+        print('here')
+    else:
+        continue
 
 
-    duplicates = get_duplicates()
-    commitsFile = open(targetPath + repo_name + '/commits.txt', "r", encoding='utf-8', errors='ignore')
-    lines = commitsFile.readlines()
-    issues = []
+    if row['AVL'] == 1:
+        before_date = '2015-08-25T00:00:00Z'
+    elif row['AVL'] == 0:
+        before_date = '2016-09-25T00:00:00Z'
+    else:
+        print('incorrect date')
+    repo_owner = row['URL'].split('/')[0].strip()
+    print("Working in " + repoName + "...")
+    repo_path = reposPath + repoName
+    # repo_path = "C:/Users/ahmed/Documents/GitHub/Thesis/androidannotations"
+    print('\tGenerating issues...')
 
+
+    check_rate_limit(username, token)
     current_time = datetime.now().strftime("%H:%M")
     print(f"\nCurrent Time: {current_time}")
 
-    for line in lines:
-        author = line.split('\t')[1].strip()
-        found = False
-        for assignee, info in assignee_info.items():
-            if (author.lower() == info[0].lower() or author.lower() == assignee.lower()) and info[2] == 0:
-                temp = assignee_info[assignee]
-                assignee_info[assignee] = (temp[0], temp[1], 1)
-                found = True
-            else:
-                if author in duplicates.keys():
-                    for duplicate in duplicates[author]:
-                        if (duplicate.lower() == assignee.lower() or duplicate.lower() == info[0].lower()) and info[2] == 0:
-                            temp = assignee_info[assignee]
-                            assignee_info[assignee] = (temp[0], temp[1], 1)
-                            found = True
-                            print(f'found in duplicates, match: {duplicate} and {assignee} or {info[0]}')
-                            break
+    all_issues_before_date = get_all_issues_before_date(repo_owner, repoName, token, before_date)
+    x = 1
+    if all_issues_before_date or x:
+        # print(f"Issues in {repo_owner}/{repo_name} before {before_date}:")
+        # for issue in all_issues_before_date:
+        #     print_issue_info(issue)
+        #     print()
 
-            if found:
+        # Count the number of issues per assignee and fetch their names
+        assignee_info = count_issues_per_assignee(all_issues_before_date, token)
+
+        duplicates = get_duplicates(row['AVL'])
+        commitsFile = open(targetPath + repoName + '/commits.txt', "r", encoding='utf-8', errors='ignore')
+        lines = commitsFile.readlines()
+        issues = []
+
+        current_time = datetime.now().strftime("%H:%M")
+        print(f"\nCurrent Time: {current_time}")
+
+        for line in lines:
+            author = line.split('\t')[1].strip()
+            found = False
+            for assignee, info in assignee_info.items():
+                if (author.lower() == info[0].lower() or author.lower() == assignee.lower()) and info[2] == 0:
+                    temp = assignee_info[assignee]
+                    assignee_info[assignee] = (temp[0], temp[1], 1)
+                    found = True
+                else:
+                    if author in duplicates.keys():
+                        for duplicate in duplicates[author]:
+                            if (duplicate.lower() == assignee.lower() or duplicate.lower() == info[0].lower()) and info[2] == 0:
+                                temp = assignee_info[assignee]
+                                assignee_info[assignee] = (temp[0], temp[1], 1)
+                                found = True
+                                print(f'found in duplicates, match: {duplicate} and {assignee} or {info[0]}')
+                                break
+
+                if found:
                     issues.append(info[1])
                     break
-        if not found:
+            if not found:
                 issues.append(0)
 
-    issuesFile = open('issues.txt', "w", encoding='utf-8', errors='ignore')
-    for issue in issues:
-        issuesFile.write(f'{issue}\n')
+        issuesFile = open(targetPath + repoName + '/issues.txt', "w", encoding='utf-8', errors='ignore')
+        for issue in issues:
+            issuesFile.write(f'{issue}\n')
+
+    else:
+        print("No issues found.")
+
+    check_rate_limit(username, token)
+    current_time = datetime.now().strftime("%H:%M")
+    print(f"\nCurrent Time: {current_time}")
 
 
 
 
-
-else:
-    print("No issues found.")
-
-check_rate_limit(username,token)
-current_time = datetime.now().strftime("%H:%M")
-print(f"\nCurrent Time: {current_time}")
