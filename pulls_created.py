@@ -132,51 +132,51 @@ def get_duplicates(avl):
     return duplicates
 
 
-def get_all_issues_before_date(repo_owner, repo_name, token, before_date):
-    url = f'https://api.github.com/repos/{repo_owner}/{repo_name}/issues'
-    issues = []
+def get_all_pull_requests_before_date(repo_owner, repo_name, token, before_date):
+    url = f'https://api.github.com/repos/{repo_owner}/{repo_name}/pulls'
+    pull_requests = []
 
     page = 1
     while True:
-        params = {'page': page, 'per_page': 100, 'state': 'all'}  # Include both open and closed issues
+        params = {'page': page, 'per_page': 100, 'state': 'all'}
         response = requests.get(url, params=params, auth=(repo_owner, token))
 
         if response.status_code == 200:
-            current_issues = response.json()
-            if not current_issues:
+            current_pull_requests = response.json()
+            if not current_pull_requests:
                 break
 
-            # Include issues created before the specified date
-            issues.extend(issue for issue in current_issues if issue['created_at'] < before_date)
+            # Include pull requests created before the specified date
+            pull_requests.extend(pr for pr in current_pull_requests if pr['created_at'] < before_date)
 
             page += 1
         else:
-            print(f"Failed to retrieve issues. Status code: {response.status_code}")
+            print(f"Failed to retrieve pull requests. Status code: {response.status_code}")
             return None
 
-    return issues
+    return pull_requests
 
-def count_issues_per_assignee(issues, token):
-    assignee_counts = {}
-    assignee_info = {}
 
-    for issue in issues:
-        assignees = issue.get('assignees', [])
-        for assignee in assignees:
-            login = assignee.get('login')
+def count_pull_requests_per_contributor(pull_requests, token):
+    contributor_counts = {}
+    contributor_info = {}
+    for pr in pull_requests:
+        user = pr.get('user')
+        if user:
+            login = user.get('login')
             if login:
-                assignee_counts[login] = assignee_counts.get(login, 0) + 1
+                contributor_counts[login] = contributor_counts.get(login, 0) + 1
 
-    # Fetch and print names of assignees
-    for assignee, count in assignee_counts.items():
-        user_info = get_user_details(assignee, token)
+    # Fetch and print names of contributors
+    for contributor, count in contributor_counts.items():
+        user_info = get_user_details(contributor, token)
         name = user_info.get('name', 'N/A')
         if name is None:
             name = 'N/A'
-        assignee_info[assignee] = (name, count, 0)
-        print(f"{assignee} ({name}): {count} issues")
+        contributor_info[contributor] = (name, count, 0)
+        print(f"{contributor} ({name}): {count} pull requests")
 
-    return assignee_info
+    return contributor_info
 
 def get_user_details(username, token):
     url = f'https://api.github.com/users/{username}'
@@ -189,14 +189,7 @@ def get_user_details(username, token):
         print(f"Failed to retrieve user details for {username}. Status code: {response.status_code}")
         return None
 
-def print_issue_info(issue):
-    print(f"Issue #{issue['number']}: {issue['title']}")
-    print(f"Status: {issue['state']}")
-    if issue['assignees']:
-        assignees = [assignee['login'] for assignee in issue['assignees']]
-        print(f"Assignees: {', '.join(assignees)}")
-    else:
-        print("No assignees")
+
 
 username = "AshPlusPlus"
 repo_owner = 'Leaflet'
@@ -221,28 +214,22 @@ for index, row in df.iterrows():
     print("Working in " + repoName + "...")
     repo_path = reposPath + repoName
     # repo_path = "C:/Users/ahmed/Documents/GitHub/Thesis/androidannotations"
-    print('\tGenerating issues...')
+    print('\tGenerating pull requests...')
 
 
     check_rate_limit(username, token)
     current_time = datetime.now().strftime("%H:%M")
     print(f"\nCurrent Time: {current_time}")
 
-    all_issues_before_date = get_all_issues_before_date(repo_owner, repoName, token, before_date)
+    all_pull_requests_before_date = get_all_pull_requests_before_date(repo_owner, repoName, token, before_date)
     x = 1
-    if all_issues_before_date or x:
-        # print(f"Issues in {repo_owner}/{repo_name} before {before_date}:")
-        # for issue in all_issues_before_date:
-        #     print_issue_info(issue)
-        #     print()
-
-        # Count the number of issues per assignee and fetch their names
-        assignee_info = count_issues_per_assignee(all_issues_before_date, token)
+    if all_pull_requests_before_date or x:
+        contributor_info = count_pull_requests_per_contributor(all_pull_requests_before_date, token)
 
         duplicates = get_duplicates(row['AVL'])
         commitsFile = open(targetPath + repoName + '/commits.txt', "r", encoding='utf-8', errors='ignore')
         lines = commitsFile.readlines()
-        issues = []
+        pull_requests = []
 
         current_time = datetime.now().strftime("%H:%M")
         print(f"\nCurrent Time: {current_time}")
@@ -250,33 +237,33 @@ for index, row in df.iterrows():
         for line in lines:
             author = line.split('\t')[1].strip()
             found = False
-            for assignee, info in assignee_info.items():
-                if (author.lower() == info[0].lower() or author.lower() == assignee.lower()) and info[2] == 0:
-                    temp = assignee_info[assignee]
-                    assignee_info[assignee] = (temp[0], temp[1], 1)
+            for contributor, info in contributor_info.items():
+                if (author.lower() == info[0].lower() or author.lower() == contributor.lower()) and info[2] == 0:
+                    temp = contributor_info[contributor]
+                    contributor_info[contributor] = (temp[0], temp[1], 1)
                     found = True
                 else:
                     if author in duplicates.keys():
                         for duplicate in duplicates[author]:
-                            if (duplicate.lower() == assignee.lower() or duplicate.lower() == info[0].lower()) and info[2] == 0:
-                                temp = assignee_info[assignee]
-                                assignee_info[assignee] = (temp[0], temp[1], 1)
+                            if (duplicate.lower() == contributor.lower() or duplicate.lower() == info[0].lower()) and info[2] == 0:
+                                temp = contributor_info[contributor]
+                                contributor_info[contributor] = (temp[0], temp[1], 1)
                                 found = True
-                                print(f'found in duplicates, match: {duplicate} and {assignee} or {info[0]}')
+                                print(f'found in duplicates, match: {duplicate} and {contributor} or {info[0]}')
                                 break
 
                 if found:
-                    issues.append(info[1])
+                    pull_requests.append(info[1])
                     break
             if not found:
-                issues.append(0)
+                pull_requests.append(0)
 
-        issuesFile = open(targetPath + repoName + '/issues.txt', "w", encoding='utf-8', errors='ignore')
-        for issue in issues:
-            issuesFile.write(f'{issue}\n')
+        pullsCreatedFile = open(targetPath + repoName + '/pullsCreated.txt', "w", encoding='utf-8', errors='ignore')
+        for pull_request in pull_requests:
+            pullsCreatedFile.write(f'{pull_request}\n')
 
     else:
-        print("No issues found.")
+        print("No pull requests found.")
 
     check_rate_limit(username, token)
     current_time = datetime.now().strftime("%H:%M")
